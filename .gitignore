@@ -1,0 +1,8 @@
+/dataset/
+/logs/
+/result/
+
+# Ignore Mac system files
+.DS_store
+
+.idea/
