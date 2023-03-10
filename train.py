@@ -17,10 +17,11 @@ import os
 torch.manual_seed(44)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
+
 def fix_model_state_dict(state_dict):
-    '''
+    """
     remove 'module.' of dataparallel
-    '''
+    """
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
         name = k
@@ -28,6 +29,7 @@ def fix_model_state_dict(state_dict):
             name = name[7:]
         new_state_dict[name] = v
     return new_state_dict
+
 
 def plot_log(data, save_model_name='model'):
     plt.cla()
@@ -38,12 +40,14 @@ def plot_log(data, save_model_name='model'):
     plt.title('Loss')
     plt.savefig('./logs/'+save_model_name+'.png')
 
+
 def unnormalize(x):
     x = x.transpose(1, 3)
-    #mean, std
+    # mean, std
     x = x * torch.Tensor((0.5, )) + torch.Tensor((0.5, ))
     x = x.transpose(1, 3)
     return x
+
 
 def evaluate(model, dataset, device, filename):
     image, mask, gt = zip(*[dataset[i] for i in range(8)])
@@ -64,6 +68,7 @@ def evaluate(model, dataset, device, filename):
                                 unnormalize(output_comp), unnormalize(gt)), dim=0))
     save_image(grid, filename)
 
+
 def check_dir():
     if not os.path.exists('./logs'):
         os.mkdir('./logs')
@@ -72,6 +77,7 @@ def check_dir():
     if not os.path.exists('./result'):
         os.mkdir('./result')
 
+
 def get_parser():
     parser = argparse.ArgumentParser(
         prog='Image Inpainting using Patial Convolutions',
@@ -79,7 +85,7 @@ def get_parser():
         description='This module demonstrates image inpainting using U-Net with patial convolutions.',
         add_help=True)
 
-    parser.add_argument('-e', '--epoch', type=int, default=10000, help='Number of epochs')
+    parser.add_argument('-e', '--epoch', type=int, default=1, help='Number of epochs')
     parser.add_argument('-b', '--batch_size', type=int, default=6, help='Batch size')
     parser.add_argument('-s', '--image_size', type=int, default=256)
     parser.add_argument('-f', '--finetune', action='store_true')
@@ -87,6 +93,7 @@ def get_parser():
     parser.add_argument('--lr_finetune', type=float, default=5e-5)
 
     return parser
+
 
 def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_model_name='model'):
 
@@ -116,12 +123,12 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
 
     num_train_imgs = len(dataloader.dataset)
     batch_size = dataloader.batch_size
-    lambda_dict = {'valid':1.0, 'hole':6.0, 'perceptual':0.05, 'style':120, 'tv':0.1}
+    lambda_dict = {'valid': 1.0, 'hole': 6.0, 'perceptual': 0.05, 'style': 120, 'tv': 0.1, 'bfm': 0.01}
 
     iteration = 1
     losses = []
 
-    for epoch in range(num_epochs+1):
+    for epoch in range(num_epochs):
 
         pconv_unet.train()
         t_epoch_start = time.time()
@@ -129,7 +136,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
         epoch_loss = 0.0
 
         print('-----------')
-        print('Epoch {}/{}'.format(epoch, num_epochs))
+        print('Epoch {}/{}'.format(epoch, num_epochs+1))
         print('(train)')
 
         for images, mask, gt in tqdm(dataloader):
@@ -147,7 +154,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
             output, _ = pconv_unet(images, mask)
             loss_dict = criterion(images, mask, output, gt)
 
-            loss = 0.0
+            loss = torch.tensor(0.0)
             for key, _lambda in lambda_dict.items():
                 loss += _lambda * loss_dict[key]
 
@@ -167,19 +174,20 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
         t_epoch_start = time.time()
         plot_log(losses, save_model_name)
 
-        if(epoch%10 == 0):
+        if epoch % 10 == 0:
             torch.save(pconv_unet.state_dict(), 'checkpoints/'+save_model_name+'_'+str(epoch)+'.pth')
             pconv_unet.eval()
             evaluate(pconv_unet, val_dataset, device, '{:s}/test_{:d}.jpg'.format('result', epoch))
 
     return pconv_unet
 
+
 def main(parser):
     pconv_unet = PConvUNet()
 
     '''load'''
-    #pconv_weights = torch.load('./checkpoints/PConvUNet_PConvUNet_1000.pth')
-    #pconv_unet.load_state_dict(fix_model_state_dict(pconv_weights))
+    # pconv_weights = torch.load('./checkpoints/PConvUNet_PConvUNet_1000.pth')
+    # pconv_unet.load_state_dict(fix_model_state_dict(pconv_weights))
 
     train_img_list, val_img_list = make_datapath_list(iorm='img', path='img_align_celeba' ,phase='train')
     mask_list = make_datapath_list(iorm='mask', path='mask_rectangle')
@@ -203,6 +211,7 @@ def main(parser):
     pconv_unet_update = train_model(pconv_unet, dataloader=train_dataloader,
                                     val_dataset=val_dataset, num_epochs=num_epochs,
                                     parser=parser, save_model_name='PConvUNet_Rectangle')
+
 
 if __name__ == "__main__":
     parser = get_parser().parse_args()

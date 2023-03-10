@@ -2,6 +2,7 @@ from torchvision import models
 import torch.nn as nn
 import torch
 
+
 class VGG16map(nn.Module):
     def __init__(self):
         super(VGG16map, self).__init__()
@@ -22,6 +23,7 @@ class VGG16map(nn.Module):
 
         return [pool1, pool2, pool3]
 
+
 class Losses(nn.Module):
     def __init__(self):
         super(Losses, self).__init__()
@@ -37,7 +39,14 @@ class Losses(nn.Module):
         gram = torch.baddbmm(input, features, features_t, beta=0, alpha=1./(ch * h * w), out=None)
         return gram
 
-    def forward(self, input, mask, out, gt):
+    def BFMLoss(self, fbs):
+        bfm_loss = 0.0
+        for fb, f in zip(fbs['input'], fbs['original_img']):
+            bfm_loss += self.l1_loss(fb, f)/f.nelements
+        return bfm_loss
+
+
+    def forward(self, input, mask, out, gt, fb):
         loss_dict = {}
         comp = mask * input + (1 - mask) * out
 
@@ -46,7 +55,7 @@ class Losses(nn.Module):
         # L_valid
         loss_dict['valid'] = self.l1_loss((1 - mask) * out, (1 - mask) * gt)
 
-        #L_perceptual
+        # L_perceptual
         out_feature_map = self.vgg_map(out)
         comp_feature_map = self.vgg_map(comp)
         gt_feature_map = self.vgg_map(gt)
@@ -58,12 +67,13 @@ class Losses(nn.Module):
         # L_style_out, L_style_comp
         loss_dict['style'] = 0.0
         for i in range(3):
-            #print(out_feature_map[i].shape)
+            # print(out_feature_map[i].shape)
             loss_dict['style'] += self.l1_loss(self.gram_matrix(out_feature_map[i]), self.gram_matrix(gt_feature_map[i]))
             loss_dict['style'] += self.l1_loss(self.gram_matrix(comp_feature_map[i]), self.gram_matrix(gt_feature_map[i]))
 
         # L_tv (total variation)
         loss_dict['tv'] = self.l1_loss(comp[:, :, :, :-1], comp[:, :, :, 1:]) + self.l1_loss(comp[:, :, :-1, :], comp[:, :, 1:, :])
+        loss_dict['bfm'] = self.BFMLoss(fb)
 
         return loss_dict
 

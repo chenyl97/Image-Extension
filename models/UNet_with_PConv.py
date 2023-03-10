@@ -2,6 +2,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
+
 class PartialConv(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=False, batch_norm=False, non_linearity=None):
@@ -36,16 +37,16 @@ class PartialConv(nn.Module):
         with torch.no_grad():
             output_mask = self.mask_conv(mask)
 
-        #0:True
+        # 0:True
         mask_0 = output_mask == 0
 
-        #caluculate sum(M)
+        # calculate sum(M)
         mask_sum = output_mask.masked_fill_(mask_0, 1.0)
 
         output_pre = (output - output_bias) / mask_sum + output_bias
         output = output_pre.masked_fill_(mask_0, 0.0)
 
-        # x' 0 (otherwize)
+        # x' 0 (otherwise)
         new_m = torch.ones_like(output)
         new_m = new_m.masked_fill_(mask_0, 0.0)
 
@@ -63,6 +64,7 @@ class PartialConv(nn.Module):
             if hasattr(m, 'bias') and m.bias is not None:
                 nn.init.constant_(m.bias, 0.0)
 
+
 class PConvUNet(nn.Module):
     def __init__(self, input_channels=3):
         super(PConvUNet, self).__init__()
@@ -77,13 +79,13 @@ class PConvUNet(nn.Module):
 
         self.pconv4 = PartialConv(256, 512, kernel_size=3, stride=2, padding=1, batch_norm=True, non_linearity='relu')
 
-        #self.pconv5~8
+        # self.pconv 5~8
         for i in range(4, 8):
             setattr(
                 self, 'pconv'+str((i+1)),
                 PartialConv(512, 512, kernel_size=3, stride=2, padding=1, batch_norm=True, non_linearity='relu'))
 
-        #self.pconv9~12
+        # self.pconv 9~12
         for i in range(8, 12):
             setattr(
                 self, 'pconv'+str((i+1)),
@@ -97,7 +99,7 @@ class PConvUNet(nn.Module):
 
         self.pconv16 = PartialConv(64+3, 3, kernel_size=3, stride=1, padding=1, bias=True)
 
-    def forward(self, input, mask):
+    def forward(self, input, mask, original_img):
         x1, m1 = self.pconv1(input, mask)
         x2, m2 = self.pconv2(x1, m1)
         x3, m3 = self.pconv3(x2, m2)
@@ -139,15 +141,23 @@ class PConvUNet(nn.Module):
         concat8, m_concat8 = torch.cat([x15, input], dim=1), torch.cat([m15, mask], dim=1)
         out, out_mask = self.pconv16(concat8, m_concat8)
 
-        return out, out_mask
+        fb1, _ = self.pconv1(original_img, torch.ones_like(original_img))
+        fb2, _ = self.pconv2(fb1, torch.ones_like(fb1))
+        fb3, _ = self.pconv3(fb2, torch.ones_like(fb2))
+        fb4, _ = self.pconv4(fb3, torch.ones_like(fb3))
+
+        fb = {'input': [x9, x10, x11, x12], 'original_img': [fb1, fb2, fb3, fb4]}
+
+        return out, out_mask, fb
 
     def train(self, mode=True):
         super().train(mode)
         if self.fine_tune:
             for name, module in self.named_modules():
                 if name:
-                    if isinstance(module, nn.BatchNorm2d) and 1<=int(name.split('.')[0][5:])<=8:
+                    if isinstance(module, nn.BatchNorm2d) and 1 <= int(name.split('.')[0][5:]) <= 8:
                         module.eval()
+
 
 if __name__ == '__main__':
     size = (3, 3, 256, 256)
