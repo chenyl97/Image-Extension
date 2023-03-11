@@ -146,7 +146,7 @@ class PConvUNet(nn.Module):
         fb3, _ = self.pconv3(fb2, torch.ones_like(fb2))
         fb4, _ = self.pconv4(fb3, torch.ones_like(fb3))
 
-        fb = {'input': [x9, x10, x11, x12], 'original_img': [fb1, fb2, fb3, fb4]}
+        fb = {'input': [x5, x6, x7, x8], 'original_img': fb4}
 
         return out, out_mask, fb
 

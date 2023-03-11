@@ -1,4 +1,6 @@
-from utils.data_loader import make_datapath_list, ImageDataset, ImageTransform, MaskTransform
+import torchvision.transforms
+
+from utils.data_loader import make_datapath_list, ImageDataset, ImageTransform
 from models.UNet_with_PConv import PConvUNet
 from models.loss import Losses
 from torchvision.utils import make_grid
@@ -60,7 +62,8 @@ def evaluate(model, dataset, device, filename):
     output = output.to(torch.device('cpu'))
     output_comp = mask * image + (1 - mask) * output
 
-    # reverse for display image 
+    # reverse for display image
+    image = torchvision.transforms.ConvertImageDtype(torch.uint8)
     image = mask * unnormalize(image) + (1 - mask)
     mask = (1 - mask)
 
@@ -141,7 +144,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
 
         for images, mask, gt in tqdm(dataloader):
 
-            # if size of minibatch is 1, an error would be occured.
+            # if size of minibatch is 1, an error would be occurred.
             if images.size()[0] == 1:
                 continue
 
@@ -151,8 +154,8 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
 
             mini_batch_size = images.size()[0]
 
-            output, _ = pconv_unet(images, mask)
-            loss_dict = criterion(images, mask, output, gt)
+            output, _, fb = pconv_unet(images, mask, gt)
+            loss_dict = criterion(images, mask, output, gt, fb)
 
             loss = torch.tensor(0.0)
             for key, _lambda in lambda_dict.items():
@@ -189,8 +192,8 @@ def main(parser):
     # pconv_weights = torch.load('./checkpoints/PConvUNet_PConvUNet_1000.pth')
     # pconv_unet.load_state_dict(fix_model_state_dict(pconv_weights))
 
-    train_img_list, val_img_list = make_datapath_list(iorm='img', path='img_align_celeba' ,phase='train')
-    mask_list = make_datapath_list(iorm='mask', path='mask_rectangle')
+    train_img_list, val_img_list = make_datapath_list(iorm='img', path='img', phase='train')
+    mask_list = make_datapath_list(iorm='mask', path='')
 
     mean = (0.5,)
     std = (0.5,)
@@ -198,16 +201,15 @@ def main(parser):
     batch_size = parser.batch_size
     num_epochs = parser.epoch
 
-    train_dataset = ImageDataset(img_list=train_img_list, mask_list=mask_list,
-                                img_transform=ImageTransform(size=size, mean=mean, std=std),
-                                mask_transform=MaskTransform(size=size))
-    val_dataset = ImageDataset(img_list=val_img_list, mask_list=mask_list,
-                                img_transform=ImageTransform(size=size, mean=mean, std=std),
-                                mask_transform=MaskTransform(size=size))
+    train_dataset = ImageDataset(img_list=train_img_list,
+                                 img_transform=ImageTransform(size=size, mean=mean, std=std),
+                                 mask_width=0.5)
+    val_dataset = ImageDataset(img_list=val_img_list,
+                               img_transform=ImageTransform(size=size, mean=mean, std=std),
+                               mask_width=0.5)
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True) #num_workers=4
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)  # num_workers=4
 
-    
     pconv_unet_update = train_model(pconv_unet, dataloader=train_dataloader,
                                     val_dataset=val_dataset, num_epochs=num_epochs,
                                     parser=parser, save_model_name='PConvUNet_Rectangle')
@@ -216,4 +218,3 @@ def main(parser):
 if __name__ == "__main__":
     parser = get_parser().parse_args()
     main(parser)
-

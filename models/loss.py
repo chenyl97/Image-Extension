@@ -39,11 +39,14 @@ class Losses(nn.Module):
         gram = torch.baddbmm(input, features, features_t, beta=0, alpha=1./(ch * h * w), out=None)
         return gram
 
-    def BFMLoss(self, fbs):
-        bfm_loss = 0.0
-        for fb, f in zip(fbs['input'], fbs['original_img']):
-            bfm_loss += self.l1_loss(fb, f)/f.nelements
-        return bfm_loss
+    def bfm_loss(self, fbs):
+        loss = 0.0
+        count = 0
+        f = fbs['original_img']
+        for fb in fbs['input']:
+            loss += self.l1_loss(fb, f)/f.nelements
+            count += 1
+        return loss/count
 
 
     def forward(self, input, mask, out, gt, fb):
@@ -73,7 +76,7 @@ class Losses(nn.Module):
 
         # L_tv (total variation)
         loss_dict['tv'] = self.l1_loss(comp[:, :, :, :-1], comp[:, :, :, 1:]) + self.l1_loss(comp[:, :, :-1, :], comp[:, :, 1:, :])
-        loss_dict['bfm'] = self.BFMLoss(fb)
+        loss_dict['bfm'] = self.bfm_loss(fb)
 
         return loss_dict
 
