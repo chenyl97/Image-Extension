@@ -37,7 +37,7 @@ class ImageTransform:
     preprocessing images
     """
 
-    def __init__(self, size, mean, std):
+    def __init__(self, mean, std, size):
         self.data_transform = transforms.Compose([
             transforms.Resize(size=size),
             transforms.ConvertImageDtype(torch.float),
@@ -95,6 +95,7 @@ class ImageDataset(data.Dataset):
                              ],
                             dim=2)
 
-        assert gt.size() == mask.size()
+        # print('mask_size is {}'.format(mask.size()))
+        # print('gt size is {}'.format(gt.size()))
 
         return gt * mask, mask, gt

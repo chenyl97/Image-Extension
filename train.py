@@ -22,7 +22,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 def fix_model_state_dict(state_dict):
     """
-    remove 'module.' of dataparallel
+    remove 'module.' of data parallel
     """
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
@@ -57,18 +57,25 @@ def evaluate(model, dataset, device, filename):
     mask = torch.stack(mask)
     gt = torch.stack(gt)
 
+    # float2uint8 = torchvision.transforms.ConvertImageDtype(torch.uint8)
+
     with torch.no_grad():
-        output, _ = model(image.to(device), mask.to(device))
+        output, _, _ = model(image.to(device), mask.to(device), gt)
     output = output.to(torch.device('cpu'))
     output_comp = mask * image + (1 - mask) * output
 
     # reverse for display image
-    image = torchvision.transforms.ConvertImageDtype(torch.uint8)
+
     image = mask * unnormalize(image) + (1 - mask)
     mask = (1 - mask)
 
-    grid = make_grid(torch.cat((mask, unnormalize(output), image,
-                                unnormalize(output_comp), unnormalize(gt)), dim=0))
+    grid = make_grid(torch.cat((mask,
+                                unnormalize(output),
+                                image,
+                                unnormalize(output_comp),
+                                unnormalize(gt)
+                                ),
+                               dim=0))
     save_image(grid, filename)
 
 
@@ -83,7 +90,7 @@ def check_dir():
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        prog='Image Inpainting using Patial Convolutions',
+        prog='Image Inpainting using Partial Convolutions',
         usage='python3 main.py',
         description='This module demonstrates image inpainting using U-Net with patial convolutions.',
         add_help=True)
@@ -94,6 +101,7 @@ def get_parser():
     parser.add_argument('-f', '--finetune', action='store_true')
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--lr_finetune', type=float, default=5e-5)
+
 
     return parser
 
@@ -139,7 +147,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
         epoch_loss = 0.0
 
         print('-----------')
-        print('Epoch {}/{}'.format(epoch, num_epochs+1))
+        print('Epoch {}/{}'.format(epoch+1, num_epochs))
         print('(train)')
 
         for images, mask, gt in tqdm(dataloader):
@@ -169,7 +177,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
 
         t_epoch_finish = time.time()
         print('-----------')
-        print('epoch {}'.format(epoch))
+        print('epoch {}'.format(epoch+1))
         print('total_loss:{:.4f}'.format(epoch_loss/batch_size))
         print('timer: {:.4f} sec.'.format(t_epoch_finish - t_epoch_start))
 
@@ -197,7 +205,7 @@ def main(parser):
 
     mean = (0.5,)
     std = (0.5,)
-    size = (parser.image_size, parser.image_size)
+    size = (parser.image_size, 2 * parser.image_size)
     batch_size = parser.batch_size
     num_epochs = parser.epoch
 

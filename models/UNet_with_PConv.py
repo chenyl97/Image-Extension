@@ -100,6 +100,8 @@ class PConvUNet(nn.Module):
         self.pconv16 = PartialConv(64+3, 3, kernel_size=3, stride=1, padding=1, bias=True)
 
     def forward(self, input, mask, original_img):
+        fb = {'input': []}
+
         x1, m1 = self.pconv1(input, mask)
         x2, m2 = self.pconv2(x1, m1)
         x3, m3 = self.pconv3(x2, m2)
@@ -112,18 +114,24 @@ class PConvUNet(nn.Module):
         x8, m8 = F.interpolate(x8, scale_factor=2, mode='nearest'), F.interpolate(m8, scale_factor=2, mode='nearest')
         concat1, m_concat1 = torch.cat([x8, x7], dim=1), torch.cat([m8, m7], dim=1)
         x9, m9 = self.pconv9(concat1, m_concat1)
+        # print('x9 size: {}'.format(x9.size()))
 
         x9, m9 = F.interpolate(x9, scale_factor=2, mode='nearest'), F.interpolate(m9, scale_factor=2, mode='nearest')
         concat2, m_concat2 = torch.cat([x9, x6], dim=1), torch.cat([m9, m6], dim=1)
         x10, m10 = self.pconv10(concat2, m_concat2)
+        # print('x10 size: {}'.format(x10.size()))
 
         x10, m10 = F.interpolate(x10, scale_factor=2, mode='nearest'), F.interpolate(m10, scale_factor=2, mode='nearest')
         concat3, m_concat3 = torch.cat([x10, x5], dim=1), torch.cat([m10, m5], dim=1)
         x11, m11 = self.pconv11(concat3, m_concat3)
+        # print('x11 size: {}'.format(x11.size()))
 
         x11, m11 = F.interpolate(x11, scale_factor=2, mode='nearest'), F.interpolate(m11, scale_factor=2, mode='nearest')
         concat4, m_concat4 = torch.cat([x11, x4], dim=1), torch.cat([m11, m4], dim=1)
         x12, m12 = self.pconv12(concat4, m_concat4)
+        fb['input'].append(x12)
+        # print('x12 size: {}'.format(x12.size()))
+        # print(torch.sum(m12 == 0))
 
         x12, m12 = F.interpolate(x12, scale_factor=2, mode='nearest'), F.interpolate(m12, scale_factor=2, mode='nearest')
         concat5, m_concat5 = torch.cat([x12, x3], dim=1), torch.cat([m12, m3], dim=1)
@@ -141,12 +149,17 @@ class PConvUNet(nn.Module):
         concat8, m_concat8 = torch.cat([x15, input], dim=1), torch.cat([m15, mask], dim=1)
         out, out_mask = self.pconv16(concat8, m_concat8)
 
+        # print('img size: {}'.format(original_img.size()))
         fb1, _ = self.pconv1(original_img, torch.ones_like(original_img))
+        # print('fb1 size: {}'.format(fb1.size()))
         fb2, _ = self.pconv2(fb1, torch.ones_like(fb1))
+        # print('fb2 size: {}'.format(fb2.size()))
         fb3, _ = self.pconv3(fb2, torch.ones_like(fb2))
+        # print('fb3 size: {}'.format(fb3.size()))
         fb4, _ = self.pconv4(fb3, torch.ones_like(fb3))
+        # print('fb4 size: {}'.format(fb4.size()))
 
-        fb = {'input': [x5, x6, x7, x8], 'original_img': fb4}
+        fb['original_img'] = fb4
 
         return out, out_mask, fb
 

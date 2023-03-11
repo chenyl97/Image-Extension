@@ -44,7 +44,7 @@ class Losses(nn.Module):
         count = 0
         f = fbs['original_img']
         for fb in fbs['input']:
-            loss += self.l1_loss(fb, f)/f.nelements
+            loss += torch.div(self.l1_loss(fb, f), f.nelement())
             count += 1
         return loss/count
 
