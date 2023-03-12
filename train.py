@@ -3,8 +3,7 @@ import torchvision.transforms
 from utils.data_loader import make_datapath_list, ImageDataset, ImageTransform
 from models.UNet_with_PConv import PConvUNet
 from models.loss import Losses
-from torchvision.utils import make_grid
-from torchvision.utils import save_image
+from models.metrics import Evaluator
 from torchvision import models
 from collections import OrderedDict
 from tqdm import tqdm
@@ -41,42 +40,6 @@ def plot_log(data, save_model_name='model'):
     plt.ylabel('loss')
     plt.title('Loss')
     plt.savefig('./logs/'+save_model_name+'.png')
-
-
-def unnormalize(x):
-    x = x.transpose(1, 3)
-    # mean, std
-    x = x * torch.Tensor((0.5, )) + torch.Tensor((0.5, ))
-    x = x.transpose(1, 3)
-    return x
-
-
-def evaluate(model, dataset, device, filename):
-    image, mask, gt = zip(*[dataset[i] for i in range(8)])
-    image = torch.stack(image)
-    mask = torch.stack(mask)
-    gt = torch.stack(gt)
-
-    # float2uint8 = torchvision.transforms.ConvertImageDtype(torch.uint8)
-
-    with torch.no_grad():
-        output, _, _ = model(image.to(device), mask.to(device), gt)
-    output = output.to(torch.device('cpu'))
-    output_comp = mask * image + (1 - mask) * output
-
-    # reverse for display image
-
-    image = mask * unnormalize(image) + (1 - mask)
-    mask = (1 - mask)
-
-    grid = make_grid(torch.cat((mask,
-                                unnormalize(output),
-                                image,
-                                unnormalize(output_comp),
-                                unnormalize(gt)
-                                ),
-                               dim=0))
-    save_image(grid, filename)
 
 
 def check_dir():
@@ -134,7 +97,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
 
     num_train_imgs = len(dataloader.dataset)
     batch_size = dataloader.batch_size
-    lambda_dict = {'valid': 1.0, 'hole': 6.0, 'perceptual': 0.05, 'style': 120, 'tv': 0.1, 'bfm': 0.01}
+    lambda_dict = {'valid': 1.0, 'hole': 6.0, 'perceptual': 0.05, 'style': 120, 'tv': 0.1, 'bfm': 0.1}
 
     iteration = 1
     losses = []
@@ -186,10 +149,11 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
         plot_log(losses, save_model_name)
 
         if epoch % 10 == 0:
-            torch.save(pconv_unet.state_dict(), 'checkpoints/'+save_model_name+'_'+str(epoch)+'.pth')
+            torch.save(pconv_unet.state_dict(), 'checkpoints/'+save_model_name+'_'+str(epoch+1)+'.pth')
             pconv_unet.eval()
-            evaluate(pconv_unet, val_dataset, device, '{:s}/test_{:d}.jpg'.format('result', epoch))
-
+            evaluator = Evaluator(pconv_unet)
+            metrics = evaluator.evaluate(val_dataset, device, '{:s}/test_{:d}.jpg'.format('result', epoch))
+            print('metrics: PSNR = {:.2f}, SSIM = {:.2f}, FID = {:.2f}'.format(metrics['PSNR'], metrics['SSIM'], metrics['FID']))
     return pconv_unet
 
 
