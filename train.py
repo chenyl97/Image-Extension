@@ -148,12 +148,12 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
         t_epoch_start = time.time()
         plot_log(losses, save_model_name)
 
-        if epoch % 10 == 0:
+        if epoch % 5 == 0:
             torch.save(pconv_unet.state_dict(), 'checkpoints/'+save_model_name+'_'+str(epoch+1)+'.pth')
             pconv_unet.eval()
             evaluator = Evaluator(pconv_unet)
             metrics = evaluator.evaluate(val_dataset, device, '{:s}/test_{:d}.jpg'.format('result', epoch))
-            print('metrics: PSNR = {:.2f}, SSIM = {:.2f}, FID = {:.2f}'.format(metrics['PSNR'], metrics['SSIM'], metrics['FID']))
+            print('metrics: PSNR = {:.2f}, SSIM = {:.2f}'.format(metrics['PSNR'], metrics['SSIM']))
     return pconv_unet
 
 
