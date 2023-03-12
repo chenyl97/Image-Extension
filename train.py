@@ -58,7 +58,7 @@ def get_parser():
         description='This module demonstrates image inpainting using U-Net with patial convolutions.',
         add_help=True)
 
-    parser.add_argument('-e', '--epoch', type=int, default=1, help='Number of epochs')
+    parser.add_argument('-e', '--epoch', type=int, default=10, help='Number of epochs')
     parser.add_argument('-b', '--batch_size', type=int, default=6, help='Batch size')
     parser.add_argument('-s', '--image_size', type=int, default=256)
     parser.add_argument('-f', '--finetune', action='store_true')
