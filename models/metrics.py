@@ -36,8 +36,8 @@ class Evaluator:
         # float2uint8 = torchvision.transforms.ConvertImageDtype(torch.uint8)
 
         with torch.no_grad():
-            output, _, _ = self.model(image.to(device), mask.to(device), gt)
-        # output = output.to(torch.device('cpu'))
+            output, _, _ = self.model(image.to(device), mask.to(device), gt.to(device))
+        output = output.to(torch.device('cpu'))
         output_comp = mask * image + (1 - mask) * output
 
         # reverse for display image
@@ -75,8 +75,8 @@ class Evaluator:
                                      gt[mask == 1].reshape(8, c, h, int(torch.sum(mask[0] == 1).item() / (h * c))))
 
         metrics['PSNR'] /= 8
-        # metrics['SSIM'] /= 8
-        metrics['FID'] /= 8
+        metrics['SSIM'] /= 8
+        # metrics['FID'] /= 8
 
         return metrics
 

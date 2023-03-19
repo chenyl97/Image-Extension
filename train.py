@@ -55,7 +55,7 @@ def get_parser():
     parser = argparse.ArgumentParser(
         prog='Image Inpainting using Partial Convolutions',
         usage='python3 main.py',
-        description='This module demonstrates image inpainting using U-Net with patial convolutions.',
+        description='This module demonstrates image inpainting using U-Net with partial convolutions.',
         add_help=True)
 
     parser.add_argument('-e', '--epoch', type=int, default=10, help='Number of epochs')
@@ -148,7 +148,7 @@ def train_model(pconv_unet, dataloader, val_dataset, num_epochs, parser, save_mo
         t_epoch_start = time.time()
         plot_log(losses, save_model_name)
 
-        if epoch % 5 == 0:
+        if epoch % 1 == 0:
             torch.save(pconv_unet.state_dict(), 'checkpoints/'+save_model_name+'_'+str(epoch+1)+'.pth')
             pconv_unet.eval()
             evaluator = Evaluator(pconv_unet)
@@ -164,7 +164,7 @@ def main(parser):
     # pconv_weights = torch.load('./checkpoints/PConvUNet_PConvUNet_1000.pth')
     # pconv_unet.load_state_dict(fix_model_state_dict(pconv_weights))
 
-    train_img_list, val_img_list = make_datapath_list(iorm='img', path='img', phase='train')
+    train_img_list, val_img_list = make_datapath_list(iorm='img', path='archive/train_256_places365standard/data_256', phase='train', dataset_num=10000)
     mask_list = make_datapath_list(iorm='mask', path='')
 
     mean = (0.5,)

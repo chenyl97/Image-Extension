@@ -10,23 +10,32 @@ from PIL import Image
 import random
 
 
-def make_datapath_list(iorm='img', path='img', phase="train", rate=0.8):
+def make_datapath_list(iorm='img', path='img', phase="train", rate=0.8, dataset_num=10000):
     """
     make filepath list for train and validation image and mask.
     """
-    rootpath = "./dataset/" + path
-    target_path = os.path.join(rootpath + '/*.jpg')
-    # print(target_path)
+    rootpath = "project/dataset/" + path
+    classes = ['aquarium', 'athletic_ﬁeld/outdoor', 'beach', 'cliff', 'coast', 'forest_path', 'golf_course', 'harbor',
+               'lake/natural', 'mountain', 'ocean', 'pier', 'pond', 'rainforest', 'river', 'skyscraper', 'swamp',
+               'underwater/ocean_deep', 'valley', 'vegetable_garden']
+
+    target_paths = []
+    for cls in classes:
+        cls = '/' + cls[0] + '/' + cls
+        target_path = os.path.join(rootpath + cls + '/*.jpg')
+        target_paths.append(target_path)
 
     path_list = []
+    print(target_paths[0])
 
-    for path in glob.glob(target_path):
-        path_list.append(path)
+    for target_path in target_paths:
+        for path in glob.glob(target_path):
+            path_list.append(path)
 
     if phase == 'train' and iorm == 'img':
-        num = len(path_list)
         random.shuffle(path_list)
-        return path_list[:int(num * rate)], path_list[int(num * rate):]
+        path_list = path_list[:dataset_num]
+        return path_list[:int(dataset_num * rate)], path_list[int(dataset_num * rate):]
 
     elif phase == 'test' or iorm == 'mask':
         return path_list
