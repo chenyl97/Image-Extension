@@ -101,53 +101,66 @@ class PConvUNet(nn.Module):
 
     def forward(self, input, mask, original_img):
         fb = {'input': []}
+        print('input size: {}'.format(input.size()))
 
         x1, m1 = self.pconv1(input, mask)
+        print('x1 size: {}'.format(x1.size()))
         x2, m2 = self.pconv2(x1, m1)
+        print('x2 size: {}'.format(x2.size()))
         x3, m3 = self.pconv3(x2, m2)
+        print('x3 size: {}'.format(x3.size()))
         x4, m4 = self.pconv4(x3, m3)
+        print('x4 size: {}'.format(x4.size()))
         x5, m5 = self.pconv5(x4, m4)
+        print('x5 size: {}'.format(x5.size()))
         x6, m6 = self.pconv6(x5, m5)
+        print('x6 size: {}'.format(x6.size()))
         x7, m7 = self.pconv7(x6, m6)
+        print('x7 size: {}'.format(x7.size()))
         x8, m8 = self.pconv8(x7, m7)
+        print('x8 size: {}'.format(x8.size()))
 
         x8, m8 = F.interpolate(x8, scale_factor=2, mode='nearest'), F.interpolate(m8, scale_factor=2, mode='nearest')
         concat1, m_concat1 = torch.cat([x8, x7], dim=1), torch.cat([m8, m7], dim=1)
         x9, m9 = self.pconv9(concat1, m_concat1)
-        # print('x9 size: {}'.format(x9.size()))
+        print('x9 size: {}'.format(x9.size()))
 
         x9, m9 = F.interpolate(x9, scale_factor=2, mode='nearest'), F.interpolate(m9, scale_factor=2, mode='nearest')
         concat2, m_concat2 = torch.cat([x9, x6], dim=1), torch.cat([m9, m6], dim=1)
         x10, m10 = self.pconv10(concat2, m_concat2)
-        # print('x10 size: {}'.format(x10.size()))
+        print('x10 size: {}'.format(x10.size()))
 
         x10, m10 = F.interpolate(x10, scale_factor=2, mode='nearest'), F.interpolate(m10, scale_factor=2, mode='nearest')
         concat3, m_concat3 = torch.cat([x10, x5], dim=1), torch.cat([m10, m5], dim=1)
         x11, m11 = self.pconv11(concat3, m_concat3)
-        # print('x11 size: {}'.format(x11.size()))
+        print('x11 size: {}'.format(x11.size()))
 
         x11, m11 = F.interpolate(x11, scale_factor=2, mode='nearest'), F.interpolate(m11, scale_factor=2, mode='nearest')
         concat4, m_concat4 = torch.cat([x11, x4], dim=1), torch.cat([m11, m4], dim=1)
         x12, m12 = self.pconv12(concat4, m_concat4)
         fb['input'].append(x12)
-        # print('x12 size: {}'.format(x12.size()))
+        print('x12 size: {}'.format(x12.size()))
         # print(torch.sum(m12 == 0))
 
         x12, m12 = F.interpolate(x12, scale_factor=2, mode='nearest'), F.interpolate(m12, scale_factor=2, mode='nearest')
         concat5, m_concat5 = torch.cat([x12, x3], dim=1), torch.cat([m12, m3], dim=1)
         x13, m13 = self.pconv13(concat5, m_concat5)
+        print('x13 size: {}'.format(x13.size()))
 
         x13, m13 = F.interpolate(x13, scale_factor=2, mode='nearest'), F.interpolate(m13, scale_factor=2, mode='nearest')
         concat6, m_concat6 = torch.cat([x13, x2], dim=1), torch.cat([m13, m2], dim=1)
         x14, m14 = self.pconv14(concat6, m_concat6)
+        print('x14 size: {}'.format(x14.size()))
 
         x14, m14 = F.interpolate(x14, scale_factor=2, mode='nearest'), F.interpolate(m14, scale_factor=2, mode='nearest')
         concat7, m_concat7 = torch.cat([x14, x1], dim=1), torch.cat([m14, m1], dim=1)
         x15, m15 = self.pconv15(concat7, m_concat7)
+        print('x15 size: {}'.format(x15.size()))
 
         x15, m15 = F.interpolate(x15, scale_factor=2, mode='nearest'), F.interpolate(m15, scale_factor=2, mode='nearest')
         concat8, m_concat8 = torch.cat([x15, input], dim=1), torch.cat([m15, mask], dim=1)
         out, out_mask = self.pconv16(concat8, m_concat8)
+        print('out size: {}'.format(out.size()))
 
         # print('img size: {}'.format(original_img.size()))
         fb1, _ = self.pconv1(original_img, torch.ones_like(original_img))
