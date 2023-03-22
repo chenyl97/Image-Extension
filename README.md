@@ -6,7 +6,7 @@ this repository is adapted from IsHYuhi's implementation of Image Inpainting usi
 listed in requirements.txt
 
 ## How to use
-* Put images under ```./img``` and mask images under ```./mask```.
+* Put images under ```./img```.
 Then,
 ```
 python3 train.py
