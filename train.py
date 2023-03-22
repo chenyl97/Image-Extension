@@ -164,7 +164,7 @@ def main(parser):
     # pconv_weights = torch.load('./checkpoints/PConvUNet_PConvUNet_1000.pth')
     # pconv_unet.load_state_dict(fix_model_state_dict(pconv_weights))
 
-    train_img_list, val_img_list = make_datapath_list(iorm='img', path='archive/train_256_places365standard/data_256', phase='train', dataset_num=10000)
+    train_img_list, val_img_list = make_datapath_list(iorm='img', path='img', phase='train', dataset_num=10000)
     mask_list = make_datapath_list(iorm='mask', path='')
 
     mean = (0.5,)
